@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'node'  // Specify the Node.js version to use
+    }
+
+    environment {
+        REACT_APP_BUILD_PATH = './build'  // Path where React build artifacts will be generated
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                checkout scm  // Checkout the source code from the repository
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'  // Install dependencies using npm
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'npm test'  // Run unit tests using Jest (from your testing library)
+            }
+        }
+
+        stage('Build React Application') {
+            steps {
+                sh 'npm run build'  // Run the build command to build the React app
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                // You can add deployment steps here, like pushing the build to a server or deploying via AWS S3
+                sh 'echo "Deploy step is not defined."'  // Placeholder step; modify as needed
+            }
+        }
+    }
+
+    post {
+        always {
+            // Optional: Cleanup work after the pipeline finishes
+            deleteDir()
+        }
+
+        success {
+            // Notify on success (if needed)
+            // Example: Slack or email notification
+        }
+
+        failure {
+            // Notify on failure (if needed)
+            // Example: Slack or email notification
+        }
+    }
+}

@@ -2,6 +2,88 @@ pipeline {
     agent any
 
     tools {
+        nodejs 'node'
+    }
+
+    environment {
+        REACT_APP_BUILD_PATH = './build'
+        AWS_REGION = 'us-east-1'
+        FUNCTION_NAME = 'joke-generator-jenkins-lambda'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'npm test'
+            }
+        }
+
+        stage('Build React Application') {
+            steps {
+                sh 'npm run build'
+                archiveArtifacts artifacts: 'build/**', fingerprint: true  // Store files in Jenkins
+            }
+        }
+
+        stage('Serve React App') {
+            steps {
+                script {
+                    // Run the server in the background
+                    sh 'npx serve -s build -l 3000 &'
+                }
+                echo "✅ React App is now running at: http://<JENKINS_SERVER>:3000"
+            }
+        }
+
+        stage('Package for AWS Lambda') {
+            steps {
+                sh '''
+                zip -r lambda-package.zip build package.json node_modules
+                '''
+                archiveArtifacts artifacts: 'lambda-package.zip', fingerprint: true
+            }
+        }
+
+        stage('Deploy to AWS Lambda') {
+            steps {
+                withAWS(region: "${AWS_REGION}") {
+                    sh '''
+                    aws lambda update-function-code --function-name ${FUNCTION_NAME} --zip-file fileb://lambda-package.zip
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            deleteDir()
+        }
+
+        success {
+            echo "✅ Deployment successful!"
+        }
+
+        failure {
+            echo "❌ Deployment failed!"
+        }
+    }
+}pipeline {
+    agent any
+
+    tools {
         nodejs 'node'  // Specify the Node.js version to use
     }
 
